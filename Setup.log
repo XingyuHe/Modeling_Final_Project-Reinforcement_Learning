@@ -1,1 +1,9 @@
 pip3 install --user git+https://github.com/eleurent/highway-env
+pip3 install --user git+https://github.com/eleurent/rl-agents
+
+git clone --depth=1 https://github.com/Homebrew/brew ~/.brew
+export PATH="$HOME/.brew/bin:$HOME/.brew/sbin:$PATH"
+source ~/.bash_profile
+
+brew install ffmpeg
+pip install jupyter

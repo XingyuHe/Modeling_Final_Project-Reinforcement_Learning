@@ -22,9 +22,11 @@ config = {
     }
 }
 env = gym.make('highway-v0')
+print(type(env))
 env.configure(config)
 obs = env.reset()
 pprint(obs)
+
 
 # for _ in range(3):
 #     action = env.action_type.actions_indexes["IDLE"]
