@@ -5,21 +5,16 @@ import networkx as nx
 
 class MonteCarloTreeSearch(object):
 
-    def __init__(self, player, env):
+    def __init__(self, player, root_GameState, utc_explore_parameter):
 
         self.node_counter = 0
-        self.root_GameState = GameState(None, None, env)
+        self.root_GameState = root_GameState
         self.action_space = self.root_GameState.action_space()
-        self.UTC_explore_parameter = 0.01
+        self.UTC_explore_parameter = utc_explore_parameter
         self.searchTimes = 100
 
         self.digraph = nx.DiGraph()
-
-        self.digraph.add_node(self.node_counter, attr_dict={"Q": 0,
-                                                            "N": 0,
-                                                            'uct': 0,
-                                                            'expanded': False,
-                                                            'GameState': self.root_GameState})
+        self.digraph.add_node(self.node_counter, Q=0, N=0, uct=0, expanded=False, GameState=self.root_GameState)
         self.last_move = None
         self.node_counter += 1
         self.player = player
@@ -55,30 +50,40 @@ class MonteCarloTreeSearch(object):
         for _ in range(self.searchTimes):
             print('================ ( selection ) ================')
             selected_node = self.select(starting_node_index)
+            if selected_node == None:
+                break
             print('================ ( expansion ) ================')
             expand_node = self.expand(selected_node)
             print('================ ( simulation ) ================')
-            terminal_node, result = self.simulate(expand_node)
+            result = self.simulate(expand_node)
             print('================ ( backpropagation ) ================')
-            self.backpropagate(terminal_node, result)
+            self.backpropagate(expand_node, result)
 
     def select_UTC_policy(self, node_index):
 
         children = self.digraph.successors(node_index)
 
-        child_index_max = 0
+        child_index_max = None
         utc_max = 0
         n_parent = self.digraph.nodes[node_index]["N"]
 
+        turn = self.digraph.nodes[node_index]["GameState"].turn()
+
         for child_index in children:
-            q_child = self.digraph.nodes[child_index]["Q"]
-            n_child = self.digraph.nodes[child_index]["N"]
+            # In case that I select a game state that is a terminal state
+            if self.digraph.nodes[child_index]["GameState"].done == False:
+                q_child = self.digraph.nodes[child_index]["Q"]
+                n_child = self.digraph.nodes[child_index]["N"]
 
-            utc = q_child / n_child + self.UTC_explore_parameter * np.sqrt(np.log(n_parent) / n_child)
+                if turn == self.player:
+                    utc = q_child / n_child + self.UTC_explore_parameter * np.sqrt(np.log(n_parent) / n_child)
+                else:
+                    utc = 1 - q_child / n_child
 
-            if utc > utc_max:
-                child_index_max = child_index
-                utc_max = utc
+                self.digraph.nodes[child_index]['uct'] = utc
+                if utc > utc_max:
+                    child_index_max = child_index
+                    utc_max = utc
 
         return child_index_max
 
@@ -86,13 +91,8 @@ class MonteCarloTreeSearch(object):
 
         curr_gameState = self.digraph.nodes[node_index]["GameState"]
         child_gameState = curr_gameState.step(action)
-        self.digraph.add_node(self.node_counter,
-                              attr_dict={"N": 0,
-                                         "Q": 0,
-                                         "uct": 0,
-                                         'expanded': False,
-                                         'GameState': child_gameState})
-        self.digraph.add_edge(node_index, self.node_counter, attr_dict={'action': action})
+        self.digraph.add_node(self.node_counter, Q=0, N=0, uct=0, expanded=False, GameState=child_gameState)
+        self.digraph.add_edge(node_index, self.node_counter, action=action)
         child_node_index = self.node_counter
         self.node_counter += 1
 
@@ -102,17 +102,24 @@ class MonteCarloTreeSearch(object):
 
         # If the node is not fully expanded, select the node to expand
         if not self.digraph.nodes[node_index]['expanded']:
+            print("Selected node index: {}".format(node_index))
             return node_index
         # Otherwise proceed traversal by finding the node that maximizes the UTC
         else:
-            return self.select(self.select_UTC_policy(node_index))
+            selected_node_index = self.select_UTC_policy(node_index)
+            if selected_node_index == None:
+                print("A terminal node is selected")
+                return None
+            else:
+                return self.select(selected_node_index)
+
 
     def expand(self, node_index):
 
         # If the node is not fully expanded, then choose one of the action to create a
         # new child node
         curr_node = self.digraph.nodes[node_index]
-        curr_gameState = curr_node["root_GameState"]
+        curr_gameState = curr_node["GameState"]
 
         legal_moves = curr_gameState.legal_moves
         print('Legal moves: {}'.format(legal_moves))
@@ -129,9 +136,10 @@ class MonteCarloTreeSearch(object):
         unvisited_actions = legal_moves - visited_actions
         print('Unvisited moves: {}'.format(unvisited_actions))
 
-        chosen_action = np.random.choice(unvisited_actions)
+        chosen_action = np.random.choice(list(unvisited_actions))
 
         child_node_index = self.add_new_node(node_index, chosen_action)
+        print('Expanded child node index: {}'.format(child_node_index))
 
         if len(self.digraph.edges(node_index)) == len(legal_moves):
             self.digraph.nodes[node_index]['expanded'] = True
@@ -142,13 +150,14 @@ class MonteCarloTreeSearch(object):
     @staticmethod
     def simulate_policy(gameState: GameState):
         # This is a weak simulation policy
-        return np.random.choice(gameState.legal_moves)
+        return np.random.choice(list(gameState.legal_moves))
 
     def simulate(self, node_index):
 
         curr_gameState = self.digraph.nodes[node_index]["GameState"]
         while not curr_gameState.winner():
 
+            # print(curr_gameState.winner)
             action = self.simulate_policy(curr_gameState)
             curr_gameState = curr_gameState.step(action)
 
@@ -158,12 +167,16 @@ class MonteCarloTreeSearch(object):
         else:
             return 0
 
-    def backpropagate(self, terminal_node_index, reward):
-        curr_node_index = terminal_node_index
-        while terminal_node_index != 0:
-            self.digraph.nodes[terminal_node_index]['N'] += 1
-            self.digraph.nodes[terminal_node_index]['Q'] += reward
-            print('Updating to n={} and w={}:\n{}'.format(self.digraph.nodes[curr_node_index]['N'],
+    def backpropagate(self, node_index, reward):
+
+        def backpropagate_sub_fn(curr_node_index, result):
+            self.digraph.nodes[curr_node_index]['N'] += 1
+            self.digraph.nodes[curr_node_index]['Q'] += result
+            print('Updating to N={} and Q={}:\n{}'.format(self.digraph.nodes[curr_node_index]['N'],
                                                           self.digraph.nodes[curr_node_index]['Q'],
                                                           self.digraph.nodes[curr_node_index]['GameState']))
-            curr_node_index = self.digraph.predecessors(curr_node_index)[0]
+
+        for curr_node_index in self.digraph.predecessors(node_index):
+            backpropagate_sub_fn(curr_node_index, reward)
+
+        backpropagate_sub_fn(node_index, reward)

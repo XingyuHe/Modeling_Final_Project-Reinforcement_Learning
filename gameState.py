@@ -5,11 +5,9 @@ from copy import deepcopy
 
 class GameState(object):
 
-    def __init__(self, action, step_info, env):
-        self.env = env
-        self.obs, self.reward, self.done, self.info = step_info
-        self.action = action
-        self.done = False
+    def __init__(self, action, env, obs, reward, done, info):
+
+        self.action, self.env, self.obs, self.reward, self.done, self.info = action, env, obs, reward, done, info
         self.legal_moves = self.generate_legal_moves()
 
     def action_space(self):
@@ -29,7 +27,7 @@ class GameState(object):
         empty list.
         """
         if self.done:
-            return []
+            return set()
 
         possible_moves = set()
         for row in range(3):
@@ -42,18 +40,30 @@ class GameState(object):
     def step(self, action):
 
         next_env = deepcopy(self.env)
-        obs, done, reward, info = next_env.step(action)
+        row, col = action // 3, action % 3
+        turn = self.turn()
 
-        child_gameState = GameState(action, [obs, done, reward, info], next_env)
+        obs, reward, done, info = next_env.step(action, turn)
+        print('Move: {} moves to ({}, {})'.format(turn, row, col))
+        print(obs, done)
+
+        child_gameState = GameState(action, next_env, obs, reward, done, info)
 
         return child_gameState
+
+    def step_row_col(self, row, col):
+
+        turn = self.turn()
+        action = row * 3 + col
+
+        return self.step(action)
 
     def turn(self):
         """
         Returns the player whose turn it is: 1 or 2
         """
         num_1 = 0
-        num_2 = 2
+        num_2 = 0
         for row in range(3):
             for col in range(3):
                 if self.obs[row][col] == 1:
@@ -67,8 +77,8 @@ class GameState(object):
 
     def winner(self):
 
-        if self.done == False:
-            return None
+        # if self.done == False:
+        #     return None
 
         for player in [1, 0]:
             # Check for winning horizontal lines
@@ -116,3 +126,4 @@ class GameState(object):
 
     def __str__(self):
         return str(self.obs)
+
