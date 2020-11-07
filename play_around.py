@@ -29,9 +29,9 @@ pprint(obs)
 
 
 # for _ in range(3):
-#     action = env.action_type.actions_indexes["IDLE"]
-#     obs, reward, done, info = env.step(action)
-#     env.render()
+#     action = root_GameState.action_type.actions_indexes["IDLE"]
+#     obs, reward, done, info = root_GameState.step(action)
+#     root_GameState.render()
 
 plt.imshow(env.render(mode="rgb_array"))
 plt.show()
