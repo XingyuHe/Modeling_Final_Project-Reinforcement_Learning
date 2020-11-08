@@ -7,3 +7,7 @@ source ~/.bash_profile
 
 brew install ffmpeg
 pip install jupyter
+
+pip install gym-tictactoe
+pip install pydot
+brew install gprof2dot
