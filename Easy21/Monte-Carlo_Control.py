@@ -51,7 +51,7 @@ def perform_sequence( N, Q):
         print("state when starting steps not initializing", state)
         epsilon = 100 / (100 +  np.sum(N[dealer_first_card, state["player_sum"], :]))
         print("epsilon", epsilon, np.sum(N[dealer_first_card, state["player_sum"], :]))
-        action = epsilon_greedy(dealer_first_card, state["player_sum"], epsilon, Q)
+        # action = epsilon_greedy(dealer_first_card, state["player_sum"], epsilon, Q)
         state, award = step(state, action)
         print("state when starting steps after one step ", state)
         
@@ -85,8 +85,11 @@ def update(dealer_first_card, state_sequence, award_sequence, action_sequence, N
         print(G_t)
         print("N")
         print( N[dealer_first_card, state_sequence[t], action_sequence[t]])
+        prevN = N[dealer_first_card, state_sequence[t], action_sequence[t]]
         N[dealer_first_card, state_sequence[t], action_sequence[t]] += 1
-        Q[dealer_first_card, state_sequence[t], action_sequence[t]] += 1 / N[dealer_first_card, state_sequence[t], action_sequence[t]] * (G_t - Q[dealer_first_card, state_sequence[t], action_sequence[t]])
+        Q[dealer_first_card, state_sequence[t], action_sequence[t]] = \
+            1 / N[dealer_first_card, state_sequence[t], action_sequence[t]] * \
+            (G_t + Q[dealer_first_card, state_sequence[t], action_sequence[t]] * prevN)
         
     return N, Q
 

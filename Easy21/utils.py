@@ -26,7 +26,7 @@ def draw_randomly(initialize=False):
 
 
 def initializer():
-        player_card = draw_randomly(True)
+        player_card = draw_randomly() + draw_randomly()
         dealer_card = draw_randomly(True)
         
         state = {"dealer_sum" : dealer_card, 
@@ -46,7 +46,7 @@ def step(state, action):
                 print(player_card)
                 if next_state["player_sum"] > 21:
                         print("busted")
-                        return None, -1
+                        return None, 0
                 else:
                         return next_state, 0
 
@@ -64,7 +64,7 @@ def step(state, action):
                         step(next_state, 0)
 
                 if next_state["dealer_sum"] > next_state["player_sum"]:
-                        return None, -1
+                        return None, 0
                 
                 if next_state["dealer_sum"] < next_state["player_sum"]:
                         return None, 1
