@@ -2,19 +2,18 @@ import numpy as np
 import copy
 
 
-def epsilon_greedy(dealer_first_card, player_sum, epsilon, Q):
+def epsilon_greedy(state, epsilon, Q):
+        dealer_card_value = state["dealer_sum"]
+        player_card_value = state["player_sum"]
         goal = np.random.choice(['random', 'optimal'], p=[epsilon, 1 - epsilon])
 
         if goal == 'random':
                 action = np.random.randint(0, 2)
-                print("action in e greedy", goal, action)
         else:
-                Q_s = Q[dealer_first_card, player_sum, :]
-
+                Q_s = Q[dealer_card_value, player_card_value, :]
                 action = np.argmax(Q_s)
-                print(
-                "decide to be greedy", action, "player sum", player_sum, "state currntly in", Q_s, "action to take",
-                action)
+        print("Epsilon greedy: taking actions according to {} policy. The action is {}. \
+        The state action value function is {}".format(goal, action, Q[dealer_card_value, player_card_value, :]))
         return action
 
 
@@ -27,7 +26,7 @@ def draw_randomly(initialize=False):
 
 def initializer():
         player_card = draw_randomly() + draw_randomly()
-        dealer_card = draw_randomly(True)
+        dealer_card = draw_randomly()
         
         state = {"dealer_sum" : dealer_card, 
                  "player_sum" : player_card}
@@ -35,41 +34,35 @@ def initializer():
         return state
 
 
-
 def step(state, action):
-        print("take you to the next step")
-        next_state = state
+        next_state = copy.deepcopy(state)
 	
         if action == 1:
                 player_card = draw_randomly()
                 next_state["player_sum"] += player_card
-                print(player_card)
+                print("PLAYER drawing card of value {}, reaching state {}".format(player_card, next_state))
                 if next_state["player_sum"] > 21:
-                        print("busted")
                         return None, 0
                 else:
                         return next_state, 0
 
         if action == 0:
-                print("action step", action)
+
+                while next_state["dealer_sum"] < 17:
+                        dealer_card = draw_randomly()
+                        next_state["dealer_sum"] += dealer_card
+                        print("dealer drawing card of value {}, reaching state {}".format(dealer_card, next_state))
 
                 if next_state['dealer_sum'] > 21:
                         return None, 1
 
-                if next_state["dealer_sum"] < 17:
-                        dealer_card = draw_randomly()
-                        print(dealer_card)
-                        next_state["dealer_sum"] += dealer_card
-                        print("state when recur for dealer", next_state)
-                        step(next_state, 0)
-
-                if next_state["dealer_sum"] > next_state["player_sum"]:
+                elif next_state["dealer_sum"] > next_state["player_sum"]:
                         return None, 0
                 
-                if next_state["dealer_sum"] < next_state["player_sum"]:
+                elif next_state["dealer_sum"] < next_state["player_sum"]:
                         return None, 1
                 
-                if next_state["dealer_sum"] == next_state["player_sum"]:
+                elif next_state["dealer_sum"] == next_state["player_sum"]:
                         return None, 0
 
 

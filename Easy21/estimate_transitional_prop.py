@@ -8,10 +8,9 @@ def draw_randomly(initialize=False):
         random_number = np.random.choice(sample_space)
         return random_number
 
-
 transitional_prop = np.zeros([11, 22, 11, 22])
 def find_transitional_prob():
-    N = 10000
+    N = 100000
     transitional_counter = np.zeros([11, 22, 11, 22])
     for dealer_card_value in range(1, len(transitional_prop)):
         for player_card_value in range(2, len(transitional_prop[dealer_card_value])):
@@ -28,7 +27,6 @@ def find_transitional_prob():
             for new_card_value in range(2, len(transitional_prop[dealer_card_value])):
                 transitional_prop[dealer_card_value, player_card_value, dealer_card_value, new_card_value] \
                     = transitional_counter[dealer_card_value, player_card_value, dealer_card_value, new_card_value] / N
-
 
 
 def if_terminal(state):
@@ -49,7 +47,7 @@ def MC_prob_winning_dealer_only(state):
     if state[1] > 21:
         dealer_only_winning_probability[state[0], state[1]]  = 0
 
-    numTrials = 10000
+    numTrials = 100000
     ans = 0.0
     for i in range(numTrials):
 
@@ -61,9 +59,8 @@ def MC_prob_winning_dealer_only(state):
             ans += 1
         if trial_state[0] > 21:
             ans += 1
-        print(trial_state, ans)
 
-
+    print(state, ans / numTrials)
     dealer_only_winning_probability[state[0], state[1]] = ans/numTrials
     return ans/numTrials
 
@@ -93,12 +90,14 @@ def find_winning_probability(state, action):
     return ans
 
 
-
+find_transitional_prob()
 # Calculate the winning probabilities of all possibe state action pair
 for dealer_card_value in range(1, 11):
     for player_card_value in range(2, 22):
         for action in range(2):
             find_winning_probability([dealer_card_value, player_card_value], action)
+np.save("winning_probability", winning_probability)
+
 
 # Find out which state action pair did not iterate through
 for dealer_card_value in range(11):
